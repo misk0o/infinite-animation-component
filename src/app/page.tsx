@@ -10,7 +10,7 @@ export default function Home() {
   if (isLoading) {
     return (
       <HaloLoader
-        text=""
+        text="misk0"
         onComplete={() => {
           setTimeout(() => setIsLoading(false), 500);
         }}
