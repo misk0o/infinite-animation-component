@@ -1,0 +1,1 @@
+# infinite-animation-component
