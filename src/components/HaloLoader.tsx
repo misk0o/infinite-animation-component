@@ -347,10 +347,21 @@ const FONT_DEF: {
 interface HaloLoaderProps {
   text?: string;
   onComplete?: () => void;
+  /**
+   * If true, guard against React Strict Mode double-running the animation.
+   * For simple loaders (home page) this avoids the effect playing twice.
+   * For interactive demos, set to false so each remount replays the animation.
+   */
+  runOnce?: boolean;
 }
 
-export default function HaloLoader({ text = "EMT", onComplete }: HaloLoaderProps) {
+export default function HaloLoader({
+  text = "MISK0",
+  onComplete,
+  runOnce = true,
+}: HaloLoaderProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const hasAnimatedRef = useRef(false);
 
   // 1. Calculate Layout statelessly
   const { renderData, totalWidth } = useMemo(() => {
@@ -387,6 +398,13 @@ export default function HaloLoader({ text = "EMT", onComplete }: HaloLoaderProps
 
   // 2. Setup Animation
   useEffect(() => {
+    if (runOnce) {
+      if (hasAnimatedRef.current) {
+        return;
+      }
+      hasAnimatedRef.current = true;
+    }
+
     const premiumEase = "cubic-bezier(0.77, 0, 0.175, 1)";
 
     const ctx = gsap.context(() => {
@@ -404,8 +422,8 @@ export default function HaloLoader({ text = "EMT", onComplete }: HaloLoaderProps
         const vLines = group.querySelectorAll<SVGLineElement>(".v-line");
         if (vLines.length > 0) {
           gsap.set(vLines, {
-            strokeDasharray: (_i, target: any) =>
-              `0 ${(target as SVGGeometryElement).getTotalLength() * 2}`,
+            strokeDasharray: (_i, target: Element) =>
+              `0 ${(target as SVGLineElement).getTotalLength() * 2}`,
             strokeDashoffset: 0,
             opacity: 0,
           });
@@ -413,8 +431,8 @@ export default function HaloLoader({ text = "EMT", onComplete }: HaloLoaderProps
           tl.to(
             vLines,
             {
-              strokeDasharray: (_i, target: any) => {
-                const len = (target as SVGGeometryElement).getTotalLength();
+              strokeDasharray: (_i, target: Element) => {
+                const len = (target as SVGLineElement).getTotalLength();
                 return `${len} ${len * 2}`;
               },
               opacity: 1,
@@ -450,21 +468,18 @@ export default function HaloLoader({ text = "EMT", onComplete }: HaloLoaderProps
         });
       });
 
-      tl.to(
-        ".text-svg",
-        {
-          filter: "drop-shadow(0 0 12px rgba(255, 255, 255, 0.4))",
-          duration: 1.5,
-          yoyo: true,
-          repeat: -1,
-          ease: "power2.inOut",
-        },
-        "+=0.5"
-      );
+      gsap.to(".text-svg", {
+        filter: "drop-shadow(0 0 12px rgba(255, 255, 255, 0.4))",
+        duration: 1.5,
+        yoyo: true,
+        repeat: -1,
+        ease: "power2.inOut",
+        delay: 0.5,
+      });
     }, containerRef);
 
     return () => ctx.revert();
-  }, [renderData, onComplete]);
+  }, [renderData, onComplete, runOnce]);
 
   return (
     <div ref={containerRef} style={styles.wrapper}>
